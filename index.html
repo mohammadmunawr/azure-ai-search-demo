@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Azure AI Search Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 40px;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background: #0078d4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #005fa3;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #eef3f7;
+      border-radius: 6px;
+    }
+    .field {
+      margin-bottom: 6px;
+    }
+    .field span {
+      font-weight: bold;
+      color: #0078d4;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Azure AI Search</h2>
+  <input type="text" id="searchText" placeholder="Enter search keyword" />
+  <button onclick="searchData()">Search</button>
+  <div id="results"></div>
+</div>
+
+<script>
+  const serviceName = "tcs-ai-search-demo";
+  const indexName = "employeee-index";
+  const apiKey = "OQfg6I5YUSP9ozf8jQ98mtX59BNRr7b1RDVWklRVINAzSeCnhwma";
+
+  async function searchData() {
+    const query = document.getElementById("searchText").value || "*";
+    const resultsDiv = document.getElementById("results");
+    resultsDiv.innerHTML = "Searching...";
+
+    const url = `https://${serviceName}.search.windows.net/indexes/${indexName}/docs?api-version=2023-11-01&search=${query}`;
+
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": apiKey
+        }
+      });
+
+      const data = await response.json();
+      resultsDiv.innerHTML = "";
+
+      if (!data.value || data.value.length === 0) {
+        resultsDiv.innerHTML = "No results found";
+        return;
+      }
+
+      data.value.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "result";
+
+        let html = "";
+        for (const key in item) {
+          if (key.startsWith("@search")) continue;
+
+          let value = item[key];
+
+          // Handle array of objects (like content chunks)
+          if (Array.isArray(value)) {
+            value = value
+              .map(v => v.text || JSON.stringify(v))
+              .join("<br><br>");
+          }
+          // Handle single object
+          else if (typeof value === "object" && value !== null) {
+            value = JSON.stringify(value, null, 2);
+          }
+
+          html += `<div class=\"field\"><span>${key}:</span><br>${value}</div>`;
+        }
+
+        div.innerHTML = html;
+        resultsDiv.appendChild(div);
+      });
+
+    } catch (error) {
+      resultsDiv.innerHTML = "Error fetching results";
+      console.error(error);
+    }
+  }
+</script>
+
+</body>
+</html>
